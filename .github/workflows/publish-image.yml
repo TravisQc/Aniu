@@ -17,7 +17,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/anacondakc/aniu
 
 jobs:
   build-and-push:
@@ -27,7 +26,7 @@ jobs:
       packages: write
 
     steps:
-      - name: Resolve release metadata
+      - name: Resolve image and release metadata
         id: release
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
@@ -50,6 +49,7 @@ jobs:
             publish_latest="${DISPATCH_PUBLISH_LATEST}"
           fi
 
+          echo "image=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "${GITHUB_OUTPUT}"
           echo "tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
           echo "publish_latest=${publish_latest}" >> "${GITHUB_OUTPUT}"
 
@@ -72,7 +72,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ steps.release.outputs.image }}
           tags: |
             type=raw,value=${{ steps.release.outputs.tag }}
             type=semver,pattern={{version}},value=${{ steps.release.outputs.tag }}
@@ -83,7 +83,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=Aniu
             org.opencontainers.image.description=AI trading agent workspace
-            org.opencontainers.image.source=https://github.com/AnacondaKC/Aniu
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.licenses=Apache-2.0
             org.opencontainers.image.version=${{ steps.release.outputs.tag }}
 

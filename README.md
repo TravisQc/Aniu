@@ -229,9 +229,9 @@ Release 镜像会在启动时自动修复 <code>./data</code> 的挂载根目录
 
 ### GitHub Release 镜像
 
-每次发布正式 GitHub Release，GitHub Actions 会构建并推送 Linux <code>amd64</code> 镜像到 <code>ghcr.io/anacondakc/aniu</code>。镜像包含 Release 原始标签、可解析的语义版本标签和提交 SHA 标签；正式版还会更新 <code>latest</code>，预发布版不会更新 <code>latest</code>。
+每次发布正式 GitHub Release，GitHub Actions 会构建并推送 Linux <code>amd64</code> 镜像到当前仓库对应的 GHCR 地址（仓库所有者和仓库名均转为小写）。例如，原项目对应 <code>ghcr.io/anacondakc/aniu</code>，<code>TravisQc/Aniu</code> 对应 <code>ghcr.io/travisqc/aniu</code>。镜像包含 Release 原始标签、可解析的语义版本标签和提交 SHA 标签；正式版还会更新 <code>latest</code>，预发布版不会更新 <code>latest</code>。
 
-使用指定 Release 镜像部署：
+使用原项目的指定 Release 镜像部署：
 
 ```bash
 export ANIU_IMAGE=ghcr.io/anacondakc/aniu:v1.0.3
@@ -239,7 +239,34 @@ docker pull "$ANIU_IMAGE"
 docker compose --env-file .aniu/local/.env up -d --no-build --force-recreate
 ```
 
-首次发布后，需要在 GitHub Packages 将 <code>aniu</code> 容器包设置为 Public，外部用户才能无需登录拉取镜像。停止服务但保留数据：
+首次发布后，需要在 GitHub Packages 将 <code>aniu</code> 容器包设置为 Public，外部用户才能无需登录拉取镜像；私有包需要先在部署主机登录 GHCR。
+
+### 将已有 Docker 部署切换到自己的 fork
+
+以 <code>TravisQc/Aniu</code> 为例：
+
+1. 将修复和镜像发布工作流提交并推送到自己的 fork。若 fork 的 GitHub Actions 尚未启用，先在仓库的 Actions 页面启用。
+2. 在包含这些提交的分支上创建新标签并发布正式 Release。等待 <code>Publish Docker image</code> 工作流成功，再确认自己的 GHCR 包已设为 Public（或部署主机已有私有包的读取权限）。也可以手动运行该工作流，填写包含修复的已有 Git 标签，并勾选 <code>publish_latest</code>。
+3. 在**原部署目录**编辑原来的 <code>.aniu/local/.env</code>，添加或替换以下变量，保留已有端口、Token、加密密钥和其他配置：
+
+   ```dotenv
+   ANIU_IMAGE=ghcr.io/travisqc/aniu:latest
+   ```
+
+4. 在同一目录拉取镜像并重建服务：
+
+   ```bash
+   docker compose --env-file .aniu/local/.env pull aniubot
+   docker compose --env-file .aniu/local/.env up -d --no-build --force-recreate aniubot
+   docker compose --env-file .aniu/local/.env ps
+   docker compose --env-file .aniu/local/.env logs --tail=100 aniubot
+   ```
+
+上述命令适用于本项目的 Compose 配置；如果原部署使用了其他 <code>-f</code>、<code>-p</code> 或 <code>--env-file</code> 参数，更新时继续使用原参数。若终端中曾 <code>export ANIU_IMAGE=...</code>，先执行 <code>unset ANIU_IMAGE</code>，避免它覆盖环境文件。若原 Compose 的 <code>image:</code> 写死为作者镜像，需要将其改为自己的镜像地址，或改为 <code>${ANIU_IMAGE:-aniubot:local}</code> 后再使用上述环境变量。
+
+更新前备份数据，并保持原 Compose 项目名及 <code>/app/data</code> 对应的卷或宿主机目录不变；本项目默认项目名为 <code>aniubot</code>。这样重建容器会继续使用原数据库、密钥和运行历史。此发布流程由 Release 或手动运行触发，普通推送不会发布镜像；后续更新仍需先发布新镜像，再执行拉取和重建命令。镜像目前仅构建 <code>linux/amd64</code>。
+
+停止服务但保留数据：
 
 ```bash
 docker compose --env-file .aniu/local/.env down
