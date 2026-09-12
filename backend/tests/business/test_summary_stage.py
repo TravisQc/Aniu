@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from backend.business.runs import StrategyRun, StrategySnapshot
 from backend.business.runs.agent_runner import AgentStageResult
 from backend.business.runs.execution import RunExecutionContext, RunReport
+from backend.business.runs.stage_input import SummaryEvidenceTooLargeError
 from backend.business.runs.stages.summary_stage import (
     SummaryStage,
     _coerce_html_summary,
@@ -129,3 +131,38 @@ async def test_summary_requires_run_report_and_runtime() -> None:
     context.llm_runtime = None
     with pytest.raises(Exception, match="configured llm runtime"):
         await SummaryStage().execute(context, RecordingRunner("<p>unused</p>"))
+
+
+@pytest.mark.asyncio
+async def test_summary_rejects_required_evidence_that_cannot_fit() -> None:
+    report = RunReport(content="完整报告" * 10_000)
+    context = _context(report)
+    context.llm_runtime = SimpleNamespace(
+        context_window_tokens=16_000,
+        max_output_tokens=16_000,
+    )
+    runner = RecordingRunner("<p>unused</p>")
+
+    with pytest.raises(SummaryEvidenceTooLargeError, match="required trade/error"):
+        await SummaryStage().execute(context, runner)
+
+    assert runner.prompts == []
+    assert context.run_report.content == report.content
+
+
+@pytest.mark.asyncio
+async def test_summary_rejects_prompt_that_leaves_no_evidence_budget() -> None:
+    context = _context()
+    context.snapshot = replace(
+        context.snapshot,
+        prompt_profile=replace(
+            context.snapshot.prompt_profile,
+            global_prompt="长提示词" * 10_000,
+        ),
+    )
+    runner = RecordingRunner("<p>unused</p>")
+
+    with pytest.raises(SummaryEvidenceTooLargeError, match="budget is empty"):
+        await SummaryStage().execute(context, runner)
+
+    assert runner.prompts == []

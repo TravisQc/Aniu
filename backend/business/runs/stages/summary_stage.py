@@ -16,7 +16,13 @@ from backend.business.runs.stages.stage_helpers import (
 )
 from backend.business.shared.serialization import serialize_context
 from backend.llm import estimate_tokens
+from backend.llm.context_budget import (
+    DEFAULT_CONTEXT_WINDOW_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    ContextBudgetConfig,
+)
 
+# Leave room for message/provider framing beyond the shared safety margin.
 _SUMMARY_INPUT_RESERVE_TOKENS = 2_000
 
 
@@ -25,13 +31,16 @@ def _summary_payload_budget(
     stage_prompt: str,
 ) -> int:
     runtime = context.llm_runtime
-    context_tokens = int(getattr(runtime, "context_window_tokens", 128_000))
-    output_tokens = int(getattr(runtime, "max_output_tokens", 32_768))
-    available_tokens = (
-        context_tokens - output_tokens - _SUMMARY_INPUT_RESERVE_TOKENS
+    config = ContextBudgetConfig(
+        context_window_tokens=int(
+            getattr(runtime, "context_window_tokens", DEFAULT_CONTEXT_WINDOW_TOKENS)
+        ),
+        max_output_tokens=int(
+            getattr(runtime, "max_output_tokens", DEFAULT_MAX_OUTPUT_TOKENS)
+        ),
     )
     prompt_overhead = estimate_tokens(stage_prompt + "\n\nsummary_source_data:\n")
-    return max(0, available_tokens - prompt_overhead)
+    return max(0, config.token_budget - _SUMMARY_INPUT_RESERVE_TOKENS - prompt_overhead)
 
 
 class SummaryStage:
