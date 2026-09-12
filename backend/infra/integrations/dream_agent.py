@@ -118,8 +118,7 @@ class DreamAgentRunner(DreamAgentPort):
             runtime=runtime,
             llm_client=self.llm_client,
             system_prompt=(
-                f"{settings.prompt_profile.global_prompt}\n\n"
-                f"{dream_settings.prompt}"
+                f"{settings.prompt_profile.global_prompt}\n\n{dream_settings.prompt}"
             ),
             tool_registry=registry,
             label="Dream",
@@ -132,7 +131,9 @@ def _dream_request(target_date: date) -> str:
     return (
         f"请整理 {target_date.isoformat()} 这一天的运行报告和长期记忆。"
         "请先分页阅读当日报告和全部当前记忆，再自主决定需要创建、更新、"
-        "或软删除的记忆。更新和删除必须带上最近读取到的 expected_version。"
+        "或软删除的记忆。memory_write 的 operation 只能是 create、update、delete。"
+        "合并记忆使用 update 并提供合并后的完整 content 和 reason；软删除使用 delete。"
+        "更新和删除必须带上 memory_id 与最近读取到的 expected_version。"
         "不要调用任何交易或股票工具；完成后汇报本次整理结果。"
     )
 

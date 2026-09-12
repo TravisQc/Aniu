@@ -36,10 +36,6 @@ def _schema(properties: dict[str, object], required: list[str]) -> ProviderJsonO
     )
 
 
-def _one_of(branches: list[ProviderJsonObject]) -> ProviderJsonObject:
-    return cast(ProviderJsonObject, {"type": "object", "oneOf": branches})
-
-
 def _item_payload(item: MemoryItem) -> dict[str, object]:
     return {
         "id": item.id,
@@ -161,7 +157,9 @@ class MemoryWriteTool:
     def to_tool_definition(self) -> ToolDefinition:
         content = {
             "type": "string",
-            "description": "记忆内容，create/update 必填。",
+            "description": (
+                "create/update 必填；update 提交更新或合并后的完整记忆内容。"
+            ),
         }
         reason = {
             "type": "string",
@@ -170,7 +168,9 @@ class MemoryWriteTool:
         memory_id = {
             "type": "integer",
             "minimum": 1,
-            "description": "update/delete 必须填写 memory_read 返回的记忆 id。",
+            "description": (
+                "update/delete 必填，使用 memory_read/memory_list 返回的 id。"
+            ),
         }
         expected_version = {
             "type": "integer",
@@ -179,42 +179,28 @@ class MemoryWriteTool:
         }
         return {
             "name": self.name,
-            "description": "创建、修改或软删除一条长期记忆。",
-            "parameters": _one_of(
-                [
-                    _schema(
-                        {
-                            "operation": {"const": MemoryOperation.CREATE.value},
-                            "content": content,
-                            "reason": reason,
-                        },
-                        ["operation", "content", "reason"],
-                    ),
-                    _schema(
-                        {
-                            "operation": {"const": MemoryOperation.UPDATE.value},
-                            "memory_id": memory_id,
-                            "expected_version": expected_version,
-                            "content": content,
-                            "reason": reason,
-                        },
-                        [
-                            "operation",
-                            "memory_id",
-                            "expected_version",
-                            "content",
-                            "reason",
-                        ],
-                    ),
-                    _schema(
-                        {
-                            "operation": {"const": MemoryOperation.DELETE.value},
-                            "memory_id": memory_id,
-                            "expected_version": expected_version,
-                        },
-                        ["operation", "memory_id", "expected_version"],
-                    ),
-                ]
+            "description": (
+                "创建、更新或软删除一条长期记忆。"
+                "合并记忆使用 operation=update 并提供合并后的完整 content 和 reason；"
+                "软删除使用 operation=delete。"
+            ),
+            # Keep arguments at the root for providers that only inspect properties.
+            # MemoryService validates the fields required by each operation.
+            "parameters": _schema(
+                {
+                    "operation": {
+                        "type": "string",
+                        "enum": [operation.value for operation in MemoryOperation],
+                        "description": (
+                            "create=新增，update=更新或合并，delete=软删除。"
+                        ),
+                    },
+                    "memory_id": memory_id,
+                    "expected_version": expected_version,
+                    "content": content,
+                    "reason": reason,
+                },
+                ["operation"],
             ),
         }
 
@@ -230,13 +216,31 @@ class MemoryWriteTool:
         reason: str | None = None,
         expected_version: int | None = None,
     ) -> object:
-        del tool_call_id
         if abort_signal is not None and abort_signal.aborted:
             raise RuntimeError("memory write aborted")
         try:
-            parsed_operation = MemoryOperation(operation)
-        except ValueError as exc:
-            raise ValueError("unsupported memory operation") from exc
+            parsed_operation = MemoryOperation(
+                operation.strip().lower() if isinstance(operation, str) else operation
+            )
+        except (TypeError, ValueError) as exc:
+            message = (
+                f"unsupported memory operation: {operation!r}; "
+                "operation must be 'create', 'update', or 'delete'. "
+                "To merge memories, use 'update' with the complete merged content; "
+                "to soft-delete, use 'delete'."
+            )
+            logger.warning(
+                "memory_write rejected: %s (memory_id=%r, expected_version=%r)",
+                message,
+                memory_id,
+                expected_version,
+                extra={
+                    "run_id": run_id,
+                    "tool_call_id": tool_call_id,
+                    "error_code": "invalid_memory_operation",
+                },
+            )
+            raise ValueError(message) from exc
         command = MemoryWriteCommand(
             operation=parsed_operation,
             task_id=run_id,

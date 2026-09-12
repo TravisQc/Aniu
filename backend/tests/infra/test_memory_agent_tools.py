@@ -17,12 +17,18 @@ from backend.infra.integrations.agent_runner import (
     _StageToolRegistry,
 )
 from backend.infra.integrations.agent_runtime import AgentRuntimeFactory
-from backend.infra.integrations.dream_agent_tools import DreamReportReadTool
+from backend.infra.integrations.dream_agent import DreamToolRegistry
+from backend.infra.integrations.dream_agent_tools import (
+    DreamReportReadTool,
+    MemoryListTool,
+)
 from backend.infra.integrations.memory_agent_tools import (
     MemoryReadTool,
     MemoryWriteTool,
 )
+from backend.infra.repositories.memory_repo import MemoryRepository
 from backend.llm import ModelProtocol
+from backend.llm.providers.extract import _claude_tools_spec, _openai_tool_spec
 
 
 @pytest.mark.asyncio
@@ -70,66 +76,179 @@ async def test_memory_read_schema_exposes_match_mode(session_factory) -> None:
 
 
 @pytest.mark.asyncio
-async def test_memory_write_supports_update_and_soft_delete(session_factory) -> None:
-    writer = MemoryWriteTool(session_factory)
-    created = await writer.run_for_call(
-        run_id=200,
+@pytest.mark.parametrize(
+    "operations",
+    [
+        ("create", "update", "delete"),
+        (" CREATE ", "\tUPDATE\n", " Delete "),
+    ],
+    ids=["canonical", "normalized"],
+)
+async def test_dream_memory_write_supports_update_and_soft_delete(
+    session_factory, operations
+) -> None:
+    task_id = 20260911401
+    registry = DreamToolRegistry(
+        task_id,
+        [MemoryWriteTool(session_factory), MemoryListTool(session_factory)],
+    )
+    created = await registry.call_idempotently(
+        "memory_write",
         tool_call_id="memory-write-1",
-        operation="create",
+        abort_signal=None,
+        operation=operations[0],
         content="弱市不要追高。",
         reason="本次运行观察到追高后回撤。",
     )
-    memory_id = created["item"]["id"]
+    listed = await registry.call("memory_list")
+    item = listed["items"][0]
+    assert item == created["item"]
+    memory_id = item["id"]
 
-    updated = await writer.run_for_call(
-        run_id=201,
+    updated = await registry.call_idempotently(
+        "memory_write",
         tool_call_id="memory-write-2",
-        operation="update",
+        abort_signal=None,
+        operation=operations[1],
         memory_id=memory_id,
-        expected_version=1,
+        expected_version=item["version"],
         content="弱市缩量反弹时不要追高。",
         reason="补充成交量确认条件。",
     )
     assert updated["item"]["version"] == 2
+    assert updated["item"]["updated_task_id"] == task_id
+    listed = await registry.call("memory_list")
+    assert listed["items"] == [updated["item"]]
 
-    deleted = await writer.run_for_call(
-        run_id=202,
+    with pytest.raises(ValueError, match="memory version conflict"):
+        await registry.call_idempotently(
+            "memory_write",
+            tool_call_id="memory-write-stale-delete",
+            abort_signal=None,
+            operation=operations[2],
+            memory_id=memory_id,
+            expected_version=item["version"],
+        )
+
+    deleted = await registry.call_idempotently(
+        "memory_write",
         tool_call_id="memory-write-3",
-        operation="delete",
+        abort_signal=None,
+        operation=operations[2],
         memory_id=memory_id,
-        expected_version=2,
+        expected_version=updated["item"]["version"],
     )
     assert deleted["item"]["version"] == 3
     assert deleted["item"]["deleted_at"] is not None
+    listed = await registry.call("memory_list")
+    assert listed["items"] == []
+    async with session_factory() as session:
+        assert await MemoryRepository(session).count_activities(task_id=task_id) == 3
 
 
 @pytest.mark.asyncio
-async def test_memory_write_schema_matches_operation_requirements(
+async def test_memory_write_schema_exposes_operations_to_providers(
     session_factory,
 ) -> None:
     definition = MemoryWriteTool(session_factory).to_tool_definition()
-    parameters = definition["parameters"]
-    branches = parameters["oneOf"]
-    by_operation = {
-        branch["properties"]["operation"]["const"]: branch for branch in branches
-    }
+    for parameters in (
+        _openai_tool_spec(definition)["function"]["parameters"],
+        _claude_tools_spec([definition])[0]["input_schema"],
+    ):
+        assert parameters["type"] == "object"
+        assert "oneOf" not in parameters
+        assert parameters["required"] == ["operation"]
+        assert parameters["additionalProperties"] is False
+        properties = parameters["properties"]
+        assert set(properties) == {
+            "operation",
+            "memory_id",
+            "expected_version",
+            "content",
+            "reason",
+        }
+        assert properties["operation"]["type"] == "string"
+        assert properties["operation"]["enum"] == ["create", "update", "delete"]
 
-    assert set(by_operation) == {"create", "update", "delete"}
-    assert by_operation["create"]["required"] == ["operation", "content", "reason"]
-    assert by_operation["update"]["required"] == [
-        "operation",
-        "memory_id",
-        "expected_version",
-        "content",
-        "reason",
-    ]
-    assert by_operation["delete"]["required"] == [
-        "operation",
-        "memory_id",
-        "expected_version",
-    ]
-    assert "content" not in by_operation["delete"]["properties"]
-    assert "reason" not in by_operation["delete"]["properties"]
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["merge", "soft_delete", "", None, 1, {}])
+async def test_memory_write_rejects_unknown_operations_with_actionable_diagnostics(
+    session_factory, caplog, operation
+) -> None:
+    writer = MemoryWriteTool(session_factory)
+    created = await writer.run_for_call(
+        run_id=200,
+        tool_call_id="memory-write-seed",
+        operation="create",
+        content="原始记忆。",
+        reason="原始依据。",
+    )
+    with pytest.raises(ValueError, match="unsupported memory operation") as caught:
+        await writer.run_for_call(
+            run_id=201,
+            tool_call_id="memory-write-invalid",
+            operation=operation,
+            memory_id=created["item"]["id"],
+            expected_version=created["item"]["version"],
+            content="private-invalid-memory-content",
+            reason="private-invalid-memory-reason",
+        )
+
+    message = str(caught.value)
+    assert repr(operation) in message
+    for supported in ("create", "update", "delete"):
+        assert repr(supported) in message
+    record = next(
+        record
+        for record in caplog.records
+        if record.name == "backend.infra.integrations.memory_agent_tools"
+    )
+    assert record.run_id == 201
+    assert record.tool_call_id == "memory-write-invalid"
+    assert repr(operation) in record.getMessage()
+    assert "memory_id=1" in record.getMessage()
+    assert "expected_version=1" in record.getMessage()
+    assert "private-invalid-memory" not in caplog.text
+    listed = await MemoryListTool(session_factory).run()
+    assert listed["items"] == [created["item"]]
+    async with session_factory() as session:
+        assert await MemoryRepository(session).count_activities() == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operation", "missing_field"),
+    [
+        ("create", "content"),
+        ("create", "reason"),
+        ("update", "memory_id"),
+        ("update", "expected_version"),
+        ("update", "content"),
+        ("update", "reason"),
+        ("delete", "memory_id"),
+        ("delete", "expected_version"),
+    ],
+)
+async def test_memory_write_enforces_operation_fields_at_runtime(
+    session_factory, operation, missing_field
+) -> None:
+    arguments = {"operation": operation}
+    if operation != "create":
+        arguments.update(memory_id=16, expected_version=6)
+    if operation != "delete":
+        arguments.update(content="完整记忆内容。", reason="变更依据。")
+    del arguments[missing_field]
+
+    with pytest.raises(ValueError, match=f"requires {missing_field}"):
+        await MemoryWriteTool(session_factory).run_for_call(
+            run_id=20260911401,
+            tool_call_id="memory-write-missing-field",
+            **arguments,
+        )
+    async with session_factory() as session:
+        assert await MemoryRepository(session).count_items() == 0
+        assert await MemoryRepository(session).count_activities() == 0
 
 
 @pytest.mark.asyncio
