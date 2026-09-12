@@ -246,7 +246,7 @@ docker compose --env-file .aniu/local/.env up -d --no-build --force-recreate
 以 <code>TravisQc/Aniu</code> 为例：
 
 1. 将修复和镜像发布工作流提交并推送到自己的 fork。若 fork 的 GitHub Actions 尚未启用，先在仓库的 Actions 页面启用。
-2. 在包含这些提交的分支上创建新标签并发布正式 Release。等待 <code>Publish Docker image</code> 工作流成功，再确认自己的 GHCR 包已设为 Public（或部署主机已有私有包的读取权限）。也可以手动运行该工作流，填写包含修复的已有 Git 标签，并勾选 <code>publish_latest</code>。
+2. 在包含这些提交的分支上创建新标签并发布正式 Release。也可以直接手动运行 <code>Publish Docker image</code>：选择 <code>main</code> 分支，<code>ref</code> 留空，<code>tag</code> 填要发布的镜像版本（例如 <code>1.0.4</code>），勾选 <code>publish_latest</code>。等待工作流成功，再确认自己的 GHCR 包已设为 Public（或部署主机已有私有包的读取权限）。
 3. 在**原部署目录**编辑原来的 <code>.aniu/local/.env</code>，添加或替换以下变量，保留已有端口、Token、加密密钥和其他配置：
 
    ```dotenv
@@ -265,6 +265,10 @@ docker compose --env-file .aniu/local/.env up -d --no-build --force-recreate
 上述命令适用于本项目的 Compose 配置；如果原部署使用了其他 <code>-f</code>、<code>-p</code> 或 <code>--env-file</code> 参数，更新时继续使用原参数。若终端中曾 <code>export ANIU_IMAGE=...</code>，先执行 <code>unset ANIU_IMAGE</code>，避免它覆盖环境文件。若原 Compose 的 <code>image:</code> 写死为作者镜像，需要将其改为自己的镜像地址，或改为 <code>${ANIU_IMAGE:-aniubot:local}</code> 后再使用上述环境变量。
 
 更新前备份数据，并保持原 Compose 项目名及 <code>/app/data</code> 对应的卷或宿主机目录不变；本项目默认项目名为 <code>aniubot</code>。这样重建容器会继续使用原数据库、密钥和运行历史。此发布流程由 Release 或手动运行触发，普通推送不会发布镜像；后续更新仍需先发布新镜像，再执行拉取和重建命令。镜像目前仅构建 <code>linux/amd64</code>。
+
+手动运行时，<code>ref</code> 指定要构建的已有分支、Git 标签或提交 SHA；留空会构建所选分支或标签在触发时对应的提交。<code>tag</code> 只指定 Docker 镜像版本，可以是尚未创建 Git 标签的版本号。因此 <code>ref</code> 留空、<code>tag=1.0.4</code> 并勾选 <code>publish_latest</code>，会从所选分支构建并发布 <code>ghcr.io/travisqc/aniu:1.0.4</code> 和 <code>ghcr.io/travisqc/aniu:latest</code>。正式 Release 仍按其 Git 标签构建。
+
+更新工作流后，先提交并推送，再通过 <code>Run workflow</code> 创建新运行；旧任务的 <code>Re-run jobs</code> 仍使用原提交的工作流。
 
 停止服务但保留数据：
 
