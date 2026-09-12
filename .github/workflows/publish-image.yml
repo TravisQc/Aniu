@@ -77,6 +77,15 @@ jobs:
         with:
           ref: ${{ steps.release.outputs.source_ref }}
 
+      - name: Record source revision
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
+          echo "short_sha=${sha:0:7}" >> "${GITHUB_OUTPUT}"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -91,7 +100,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          context: git
+          # Git context cannot infer a ref from a detached SHA checkout.
+          context: workflow
           images: ${{ steps.release.outputs.image }}
           flavor: latest=false
           tags: |
@@ -100,13 +110,14 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.release.outputs.tag }}
             type=semver,pattern={{major}},value=${{ steps.release.outputs.tag }}
             type=raw,value=latest,enable=${{ steps.release.outputs.publish_latest == 'true' }}
-            type=sha,format=short,prefix=sha-
+            type=raw,value=sha-${{ steps.source.outputs.short_sha }},priority=100
           labels: |
             org.opencontainers.image.title=Aniu
             org.opencontainers.image.description=AI trading agent workspace
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.licenses=Apache-2.0
             org.opencontainers.image.version=${{ steps.release.outputs.tag }}
+            org.opencontainers.image.revision=${{ steps.source.outputs.sha }}
 
       - name: Build and push Linux amd64 image
         uses: docker/build-push-action@v7
