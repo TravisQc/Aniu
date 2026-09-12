@@ -15,10 +15,15 @@ const ALLOWED_ADVISORIES = new Map([
 ]);
 const BLOCKING_SEVERITIES = new Set(["high", "critical"]);
 
-const audit = spawnSync("npm", ["audit", "--json"], {
-  cwd: new URL("..", import.meta.url),
-  encoding: "utf8",
-});
+const npmCliPath = process.env.npm_execpath;
+const audit = spawnSync(
+  npmCliPath ? process.execPath : "npm",
+  npmCliPath ? [npmCliPath, "audit", "--json"] : ["audit", "--json"],
+  {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8",
+  },
+);
 
 if (!audit.stdout) {
   process.stderr.write(audit.stderr || "npm audit produced no JSON output\n");
