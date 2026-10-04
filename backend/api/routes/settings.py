@@ -23,6 +23,7 @@ from backend.api.schemas.settings import (
     ModelProfileResponse,
     ModelsDevLookupRequest,
     ModelsDevModelResponse,
+    PushplusSettingsRequest,
     SaveModelChannelFields,
     SelectedModelRequest,
     StockApiCallLogPageResponse,
@@ -65,6 +66,14 @@ def prompt_profile_payload(
     return payload.model_dump(by_alias=True, exclude_none=True)
 
 
+def pushplus_payload(
+    payload: PushplusSettingsRequest | None,
+) -> dict[str, object] | None:
+    if payload is None:
+        return None
+    return payload.model_dump(exclude_unset=True)
+
+
 @router.get("", response_model=AppSettingsResponse)
 async def get_settings(
     service: Annotated[SettingsService, Depends(get_settings_service)],
@@ -81,6 +90,8 @@ async def update_settings(
     fields = payload.model_dump(exclude_unset=True)
     if "prompt_profile" in fields:
         fields["prompt_profile"] = prompt_profile_payload(payload.prompt_profile)
+    if "pushplus" in fields:
+        fields["pushplus"] = pushplus_payload(payload.pushplus)
     updated = await service.update_settings(UpdateSettingsCommand(**fields))
     if "dream_schedule_time" in fields:
         job_runner = getattr(runtime, "job_runner", None)

@@ -24,6 +24,7 @@ from backend.infra.integrations.mx_agent_tools import register_mx_tools
 from backend.infra.integrations.public_stock_agent_tools import (
     register_public_stock_tools,
 )
+from backend.infra.integrations.pushplus import PushplusTradeNotifier
 from backend.llm import ModelProtocol, ModelProviderConfig
 from backend.stock_api import MxMoniClient, MxPaperTradingClient, MxResearchClient
 from backend.stock_api.public import StockMarketDataService
@@ -42,6 +43,7 @@ class AgentRuntimeFactory:
         mx_trading_client: MxPaperTradingClient | None = None,
         public_stock_data: StockMarketDataService | None = None,
         session_factory: async_sessionmaker[AsyncSession] | None = None,
+        pushplus_notifier: PushplusTradeNotifier | None = None,
     ) -> None:
         self._model_profile_repo = model_profile_repo
         self._selected_model_repo = selected_model_repo
@@ -50,6 +52,7 @@ class AgentRuntimeFactory:
         self._mx_trading_client = mx_trading_client
         self._public_stock_data = public_stock_data
         self._session_factory = session_factory
+        self._pushplus_notifier = pushplus_notifier
 
     async def build_tool_registry(self) -> ToolRegistry:
         registry = ToolRegistry()
@@ -75,6 +78,7 @@ class AgentRuntimeFactory:
                 research=self._mx_research_client,
                 portfolio=self._mx_portfolio_client,
                 trading=self._mx_trading_client,
+                notifier=self._pushplus_notifier,
             )
         return registry
 

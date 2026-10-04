@@ -17,6 +17,7 @@ from backend.business.settings import (
     ModelAuthMode,
     ModelProtocol,
     OpenAIMaxTokensField,
+    PushplusChannel,
     ThinkingEffort,
 )
 from backend.business.settings.public_stock_interfaces import PublicStockProvider
@@ -60,11 +61,21 @@ class MxSettingsResponse(ApiModel):
     api_key_last_four: str | None = None
 
 
+class PushplusSettingsResponse(ApiModel):
+    enabled: bool
+    channel: PushplusChannel
+    token_configured: bool
+    token_last_four: str | None = None
+    webhook_option_configured: bool
+    webhook_option_last_four: str | None = None
+
+
 class AppSettingsResponse(ApiModel):
     mx: MxSettingsResponse
     prompt_profile: AniuAgentPromptResponse
     stage_settings: list[StageSettingsResponse]
     dream_schedule_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    pushplus: PushplusSettingsResponse
     revision: int
     created_at: datetime
     updated_at: datetime
@@ -225,6 +236,15 @@ class StageSettingsRequest(BaseModel):
     prompt: str = Field(min_length=1)
 
 
+class PushplusSettingsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    enabled: bool | None = None
+    channel: PushplusChannel | None = None
+    token: str | None = Field(default=None, min_length=1)
+    webhook_option: str | None = Field(default=None, min_length=1)
+
+
 class UpdateSettingsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -235,6 +255,7 @@ class UpdateSettingsRequest(BaseModel):
     dream_schedule_time: str | None = Field(
         default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$"
     )
+    pushplus: PushplusSettingsRequest | None = None
 
 
 class FetchModelCatalogRequest(BaseModel):

@@ -277,6 +277,10 @@ async def _shutdown_runtime(application: FastAPI) -> None:
     if runtime.mx_clients is not None:
         await cleanup("mx_clients", runtime.mx_clients.aclose)
         runtime.mx_clients = None
+    if runtime.pushplus_client is not None:
+        await cleanup("pushplus_client", runtime.pushplus_client.aclose)
+        runtime.pushplus_client = None
+        runtime.pushplus_notifier = None
     if runtime.mx_http_client is not None:
         await cleanup("mx_http_client", runtime.mx_http_client.aclose)
         runtime.mx_http_client = None

@@ -16,6 +16,8 @@ export type StageSettings = Schemas["StageSettingsResponse"];
 export type UpdateSettingsPayload = Omit<Schemas["UpdateSettingsRequest"], "stage_settings"> & {
   stage_settings?: StageSettings[];
 };
+export type PushplusChannel = Schemas["PushplusChannel"];
+export type PushplusSettings = Schemas["PushplusSettingsResponse"];
 export type StockApiSettings = Schemas["StockApiSettingsResponse"];
 export type StockApiLogToolSource = Schemas["StockApiCallLogResponse"]["tool_source"];
 export type StockApiPublicProvider = Schemas["PublicStockToolResponse"]["providers"][number];

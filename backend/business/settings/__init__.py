@@ -21,6 +21,7 @@ from backend.business.settings.prompt import (
     PROMPT_PROFILE_SCHEMA,
     AniuAgentPrompt,
 )
+from backend.business.settings.pushplus import PushplusChannel, PushplusSettings
 from backend.business.settings.stages import (
     STAGE_IDS,
     STRATEGY_STAGE_IDS,
@@ -51,6 +52,8 @@ __all__ = [
     "OpenAIMaxTokensField",
     "PROMPT_PROFILE_PROMPT_FIELDS",
     "PROMPT_PROFILE_SCHEMA",
+    "PushplusChannel",
+    "PushplusSettings",
     "STAGE_IDS",
     "STRATEGY_STAGE_IDS",
     "SelectedModel",

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import asdict, dataclass, field
 
 from backend.agent.tools.registry import ToolRegistry
+from backend.infra.integrations.pushplus import PushplusTradeNotifier
 from backend.infra.integrations.tool_policy import SideEffectLevel
 from backend.llm import ToolDefinition
 from backend.stock_api import (
@@ -41,6 +43,15 @@ _PORTFOLIO_INTENTS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     ("balance", ("资金", "余额", "资产", "balance", "cash", "账户", "bal")),
+)
+
+logger = logging.getLogger(__name__)
+
+_TRADE_SUCCESS_STATUSES = frozenset(
+    {"accepted", "cancelled", "ok", "submitted", "success"}
+)
+_TRADE_FAILURE_STATUSES = frozenset(
+    {"cancelled", "canceled", "failed", "failure", "rejected", "error"}
 )
 
 
@@ -224,6 +235,7 @@ class TradeTool:
     side_effect_level: SideEffectLevel = SideEffectLevel.WRITE
     execution_mode: str = "sequential"
     requires_market_open: bool = True
+    notifier: PushplusTradeNotifier | None = None
 
     def is_write_call(self, arguments: object) -> bool:
         del arguments
@@ -252,7 +264,13 @@ class TradeTool:
         if intent.name != "trade":
             raise ValueError("trade only accepts a limit buy or sell instruction")
         await _preflight_trade(self.portfolio, intent)
-        return await self.client.trade(instruction)
+        result = await self.client.trade(instruction)
+        if self.notifier is not None and _is_successful_trade_result(result):
+            try:
+                await self.notifier.notify(result=result, intent=intent)
+            except Exception:  # noqa: BLE001 - notification must not fail trade
+                logger.exception("unexpected PushPlus notification failure")
+        return result
 
 
 @dataclass(slots=True)
@@ -300,6 +318,7 @@ def register_mx_tools(
     research: MxResearchClient,
     portfolio: MxMoniClient,
     trading: MxPaperTradingClient,
+    notifier: PushplusTradeNotifier | None = None,
 ) -> None:
     """Expose every supported MX capability as a direct Agent tool."""
 
@@ -307,7 +326,7 @@ def register_mx_tools(
     registry.register(SearchNewsTool(research))
     registry.register(SelectStocksTool(research))
     registry.register(QueryPortfolioTool(portfolio))
-    registry.register(TradeTool(trading, portfolio))
+    registry.register(TradeTool(trading, portfolio, notifier=notifier))
     registry.register(CancelTool(trading, portfolio))
 
 
@@ -402,6 +421,31 @@ def _parse_portfolio_intents(instruction: str) -> tuple[str, ...]:
     if not intents:
         raise ValueError("无法识别组合查询；支持资金、持仓、委托、订单和成交")
     return intents
+
+
+def _is_successful_trade_result(result: object) -> bool:
+    """Accept only direct MX trade success envelopes for notification."""
+
+    if not isinstance(result, dict):
+        return False
+    if result.get("error") not in (None, "") or result.get("success") is False:
+        return False
+
+    status = result.get("status")
+    if status is not None:
+        normalized_status = str(status).strip().casefold()
+        if normalized_status in _TRADE_FAILURE_STATUSES:
+            return False
+        return normalized_status in _TRADE_SUCCESS_STATUSES
+
+    code = result.get("code")
+    if code is not None:
+        return str(code) in {"0", "200"}
+
+    return any(
+        key in result
+        for key in ("orderId", "order_id", "filledQuantity", "filled_quantity")
+    )
 
 
 __all__ = [

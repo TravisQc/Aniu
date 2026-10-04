@@ -101,6 +101,12 @@ class AppSettingsModel(Base):
         default=dict,
         server_default="{}",
     )
+    pushplus_settings_json: Mapped[dict[str, object]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+        server_default="{}",
+    )
     dream_schedule_time: Mapped[str] = mapped_column(
         String(5), nullable=False, default="00:30", server_default="00:30"
     )

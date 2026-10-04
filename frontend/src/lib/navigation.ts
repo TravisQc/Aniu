@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ChartCandlestickIcon,
+  BellRingIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   MessageSquareTextIcon,
@@ -18,7 +19,7 @@ type NavigationItem = {
   icon: LucideIcon;
 };
 
-export type MainSettingsTabId = "mx" | "channels-models" | "trading-schedule";
+export type MainSettingsTabId = "mx" | "channels-models" | "trading-schedule" | "pushplus";
 
 type MainSettingsNavigationItem = Omit<NavigationItem, "to"> & {
   id: MainSettingsTabId;
@@ -69,6 +70,12 @@ export const mainSettingsNavigationItems: MainSettingsNavigationItem[] = [
     title: "交易任务",
     description: "交易时段内按固定间隔自动运行研究、决策、交易与总结",
     icon: TimerIcon,
+  },
+  {
+    id: "pushplus",
+    title: "推送设置",
+    description: "配置 PushPlus，在成功交易后接收交易摘要",
+    icon: BellRingIcon,
   },
 ];
 

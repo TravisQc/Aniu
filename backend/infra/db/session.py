@@ -342,6 +342,13 @@ def _upgrade_sqlite_schema(connection: Connection) -> None:
                 "ADD COLUMN dream_schedule_time VARCHAR(5) NOT NULL DEFAULT '00:30'"
             )
         )
+    if "pushplus_settings_json" not in app_settings_columns:
+        connection.execute(
+            text(
+                "ALTER TABLE app_settings ADD COLUMN pushplus_settings_json "
+                "JSON NOT NULL DEFAULT '{}'"
+            )
+        )
 
     upgrade_two_stage_pipeline(connection)
 

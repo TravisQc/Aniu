@@ -415,6 +415,9 @@
           "prompt_profile": {
             "$ref": "#/components/schemas/AniuAgentPromptResponse"
           },
+          "pushplus": {
+            "$ref": "#/components/schemas/PushplusSettingsResponse"
+          },
           "revision": {
             "title": "Revision",
             "type": "integer"
@@ -437,6 +440,7 @@
           "prompt_profile",
           "stage_settings",
           "dream_schedule_time",
+          "pushplus",
           "revision",
           "created_at",
           "updated_at"
@@ -1879,6 +1883,118 @@
           "providers"
         ],
         "title": "PublicStockToolResponse",
+        "type": "object"
+      },
+      "PushplusChannel": {
+        "description": "PushPlus channels supported by the application.",
+        "enum": [
+          "wechat",
+          "webhook",
+          "cmcc"
+        ],
+        "title": "PushplusChannel",
+        "type": "string"
+      },
+      "PushplusSettingsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PushplusChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "webhook_option": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Option"
+          }
+        },
+        "title": "PushplusSettingsRequest",
+        "type": "object"
+      },
+      "PushplusSettingsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "$ref": "#/components/schemas/PushplusChannel"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "token_configured": {
+            "title": "Token Configured",
+            "type": "boolean"
+          },
+          "token_last_four": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Last Four"
+          },
+          "webhook_option_configured": {
+            "title": "Webhook Option Configured",
+            "type": "boolean"
+          },
+          "webhook_option_last_four": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Option Last Four"
+          }
+        },
+        "required": [
+          "enabled",
+          "channel",
+          "token_configured",
+          "webhook_option_configured"
+        ],
+        "title": "PushplusSettingsResponse",
         "type": "object"
       },
       "RunDetailResponse": {
@@ -3476,6 +3592,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/AniuAgentPromptRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pushplus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PushplusSettingsRequest"
               },
               {
                 "type": "null"

@@ -171,6 +171,21 @@ async def test_runtime_factory_registers_only_direct_mx_tools() -> None:
         "trade",
         "cancel",
     }
+    assert registry.get("trade").notifier is None
+
+
+@pytest.mark.asyncio
+async def test_runtime_factory_injects_notifier_only_into_trade_tool() -> None:
+    notifier = object()
+    registry = await AgentRuntimeFactory(
+        mx_research_client=object(),  # type: ignore[arg-type]
+        mx_portfolio_client=object(),  # type: ignore[arg-type]
+        mx_trading_client=object(),  # type: ignore[arg-type]
+        pushplus_notifier=notifier,  # type: ignore[arg-type]
+    ).build_tool_registry()
+
+    assert registry.get("trade").notifier is notifier
+    assert not hasattr(registry.get("cancel"), "notifier")
 
 
 @pytest.mark.asyncio

@@ -11,6 +11,7 @@ from backend.business.settings.prompt import (
     normalize_optional_str,
     utc_now,
 )
+from backend.business.settings.pushplus import PushplusSettings
 from backend.business.settings.stages import (
     STAGE_IDS,
     StageSettings,
@@ -43,15 +44,26 @@ class AppSettings:
     prompt_profile: AniuAgentPrompt = field(default_factory=AniuAgentPrompt)
     stage_settings: dict[str, StageSettings] = field(default_factory=dict)
     dream_schedule_time: str = DEFAULT_DREAM_SCHEDULE_TIME
+    pushplus: PushplusSettings = field(default_factory=PushplusSettings)
+    pushplus_token: str | None = None
     revision: int = 0
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
 
     def __post_init__(self) -> None:
         self.mx_api_key = normalize_optional_str(self.mx_api_key)
+        self.pushplus_token = normalize_optional_str(self.pushplus_token)
         self.dream_schedule_time = normalize_dream_schedule_time(
             self.dream_schedule_time
         )
+        raw_pushplus = self.pushplus
+        if isinstance(raw_pushplus, PushplusSettings):
+            pushplus = raw_pushplus
+        elif isinstance(raw_pushplus, Mapping) or raw_pushplus is None:
+            pushplus = PushplusSettings.from_mapping(raw_pushplus)
+        else:
+            raise ValueError("pushplus must be an object")
+        self.pushplus = pushplus
         raw_profile = self.prompt_profile
         if isinstance(raw_profile, AniuAgentPrompt):
             prompt_profile = raw_profile

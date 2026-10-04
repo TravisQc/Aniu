@@ -16,6 +16,7 @@ class UpdateSettingsCommand:
     prompt_profile: Any = field(default=UNSET)
     stage_settings: Any = field(default=UNSET)
     dream_schedule_time: Any = field(default=UNSET)
+    pushplus: Any = field(default=UNSET)
     expected_revision: int | None = None
 
     def provided(self, name: str) -> bool:

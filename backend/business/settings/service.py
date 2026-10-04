@@ -9,6 +9,7 @@ from backend.business.settings import (
     AniuAgentPrompt,
     AppSettings,
     ModelProfileRepositoryPort,
+    PushplusSettings,
     SelectedModel,
     SelectedModelRepositoryPort,
     StageSettings,
@@ -32,6 +33,15 @@ def _normalized_mx_api_key(value: object) -> str | None:
     if not api_key:
         raise ValueError("mx_api_key must not be blank")
     return api_key
+
+
+def _normalized_pushplus_token(value: object) -> str | None:
+    if value is None:
+        return None
+    token = str(value).strip()
+    if not token:
+        raise ValueError("pushplus.token must not be blank")
+    return token
 
 
 class SettingsService:
@@ -88,12 +98,25 @@ class SettingsService:
             if command.provided("dream_schedule_time")
             else current.dream_schedule_time
         )
+        pushplus = await self._resolve_pushplus_settings(
+            current.pushplus,
+            command.pushplus if command.provided("pushplus") else None,
+        )
+        pushplus_token = current.pushplus_token
+        if command.provided("pushplus"):
+            raw_pushplus = command.pushplus
+            if not isinstance(raw_pushplus, Mapping):
+                raise ValueError("pushplus must be an object")
+            if "token" in raw_pushplus:
+                pushplus_token = _normalized_pushplus_token(raw_pushplus["token"])
         updated = await self._model_resolver.reconcile(
             AppSettings(
                 mx_api_key=mx_api_key,
                 prompt_profile=prompt_profile,
                 stage_settings=stage_settings,
                 dream_schedule_time=dream_schedule_time,
+                pushplus=pushplus,
+                pushplus_token=pushplus_token,
                 revision=current.revision,
                 created_at=current.created_at,
                 updated_at=datetime.now(tz=UTC),
@@ -102,6 +125,21 @@ class SettingsService:
         stored = await self._settings_repo.save(updated)
         await self._commit()
         return to_settings_dto(stored)
+
+    async def _resolve_pushplus_settings(
+        self,
+        current: PushplusSettings,
+        payload: object | None,
+    ) -> PushplusSettings:
+        if payload is None:
+            return current
+        if not isinstance(payload, Mapping):
+            raise ValueError("pushplus must be an object")
+        values = current.as_dict()
+        for key in ("enabled", "channel", "webhook_option"):
+            if key in payload:
+                values[key] = payload[key]
+        return PushplusSettings.from_mapping(values)
 
     async def _load_settings(self) -> AppSettings:
         settings = await self._settings_repo.get() or AppSettings()

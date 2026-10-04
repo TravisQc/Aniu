@@ -76,6 +76,15 @@ class RecordingTradingClient:
         return {"status": "cancelled"}
 
 
+@dataclass
+class RecordingNotifier:
+    calls: list[dict[str, object]]
+
+    async def notify(self, **kwargs: object) -> bool:
+        self.calls.append(kwargs)
+        return True
+
+
 def _portfolio_order(index: int) -> PortfolioOrderSnapshot:
     return PortfolioOrderSnapshot(
         order_id=f"order-{index}",
@@ -104,6 +113,28 @@ def make_registry() -> tuple[
         research=research,  # type: ignore[arg-type]
         portfolio=portfolio,  # type: ignore[arg-type]
         trading=trading,  # type: ignore[arg-type]
+    )
+    return registry, research, portfolio, trading
+
+
+def make_registry_with_notifier(
+    notifier: RecordingNotifier,
+) -> tuple[
+    ToolRegistry,
+    RecordingResearchClient,
+    RecordingPortfolioClient,
+    RecordingTradingClient,
+]:
+    research = RecordingResearchClient([])
+    portfolio = RecordingPortfolioClient()
+    trading = RecordingTradingClient([], [])
+    registry = ToolRegistry()
+    register_mx_tools(
+        registry,
+        research=research,  # type: ignore[arg-type]
+        portfolio=portfolio,  # type: ignore[arg-type]
+        trading=trading,  # type: ignore[arg-type]
+        notifier=notifier,  # type: ignore[arg-type]
     )
     return registry, research, portfolio, trading
 
@@ -179,6 +210,18 @@ async def test_direct_read_tools_call_the_mx_clients() -> None:
         ("news", "半导体研报"),
         ("screening", "低估值高股息"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_read_and_cancel_tools_do_not_notify() -> None:
+    notifier = RecordingNotifier([])
+    registry, _, _, trading = make_registry_with_notifier(notifier)
+
+    await registry.call("query_market_data", query="贵州茅台行情")
+    await registry.call("cancel", instruction="一键撤单")
+
+    assert trading.cancellations == ["一键撤单"]
+    assert notifier.calls == []
 
 
 @pytest.mark.asyncio

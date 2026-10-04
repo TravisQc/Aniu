@@ -30,6 +30,7 @@ from backend.infra.calendar import TradingCalendar2026, is_market_session_open
 from backend.infra.integrations.agent_runner import AgentRunnerFactoryAdapter
 from backend.infra.integrations.agent_runtime import AgentRuntimeFactory
 from backend.infra.integrations.dream_agent import DreamAgentRunner
+from backend.infra.integrations.pushplus import PushplusClient, PushplusTradeNotifier
 from backend.infra.repositories import (
     AccountCacheRepository,
     MemoryDreamRepository,
@@ -83,6 +84,8 @@ class AppRuntime:
     job_runner: JobRunner | None = None
     mx_http_client: httpx.AsyncClient | None = None
     mx_clients: MxClients | None = None
+    pushplus_client: PushplusClient | None = None
+    pushplus_notifier: PushplusTradeNotifier | None = None
     public_stock_http_client: httpx.AsyncClient | None = None
     public_stock_data: StockMarketDataService | None = None
     stock_api_log_write_lock: asyncio.Lock = field(
@@ -158,6 +161,17 @@ class AppRuntime:
                 http_client=self.require_mx_http_client(),
             )
         return self.mx_clients
+
+    def require_pushplus_notifier(self) -> PushplusTradeNotifier:
+        if self.pushplus_notifier is None:
+            if self.pushplus_client is None:
+                self.pushplus_client = PushplusClient()
+            self.pushplus_notifier = PushplusTradeNotifier(
+                session_factory=self.require_session_factory(),
+                client=self.pushplus_client,
+                portfolio=self.require_mx_clients().portfolio,
+            )
+        return self.pushplus_notifier
 
     def require_public_stock_data(self) -> StockMarketDataService:
         if self.public_stock_data is None:
@@ -280,6 +294,7 @@ class AppRuntime:
                 mx_trading_client=clients.trading,
                 public_stock_data=self.public_stock_data,
                 session_factory=self.require_session_factory(),
+                pushplus_notifier=self.require_pushplus_notifier(),
             ),
             invocation_session_factory=self.require_session_factory(),
             stock_api_tool_call_logger=self._record_stock_api_tool_call,

@@ -13,6 +13,9 @@ vi.mock("@/features/settings/model-channels-settings-page", () => ({
 vi.mock("@/features/settings/schedules-page", () => ({
   TradingSchedulesPage: () => <div>交易任务内容</div>,
 }));
+vi.mock("@/features/settings/components/pushplus-settings-section", () => ({
+  PushplusSettingsPage: () => <div>推送设置内容</div>,
+}));
 
 describe("MainSettingsLayout", () => {
   it("renders settings sections as tabs without secondary routes", async () => {
@@ -21,6 +24,7 @@ describe("MainSettingsLayout", () => {
 
     const mxTab = screen.getByRole("tab", { name: "妙想设置" });
     const channelsTab = screen.getByRole("tab", { name: "渠道模型" });
+    const pushplusTab = screen.getByRole("tab", { name: "推送设置" });
     expect(screen.queryByRole("tab", { name: "复盘任务" })).not.toBeInTheDocument();
     expect(mxTab).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("妙想设置内容")).toBeInTheDocument();
@@ -31,5 +35,8 @@ describe("MainSettingsLayout", () => {
     expect(channelsTab).toHaveAttribute("aria-selected", "true");
     expect(mxTab).toHaveAttribute("aria-selected", "false");
     expect(screen.getByText("渠道模型内容")).toBeInTheDocument();
+
+    await user.click(pushplusTab);
+    expect(screen.getByText("推送设置内容")).toBeInTheDocument();
   });
 });

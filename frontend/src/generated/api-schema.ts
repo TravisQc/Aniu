@@ -734,6 +734,7 @@ export interface components {
             dream_schedule_time: string;
             mx: components["schemas"]["MxSettingsResponse"];
             prompt_profile: components["schemas"]["AniuAgentPromptResponse"];
+            pushplus: components["schemas"]["PushplusSettingsResponse"];
             /** Revision */
             revision: number;
             /** Stage Settings */
@@ -1259,6 +1260,36 @@ export interface components {
             /** Tool Name */
             tool_name: string;
         };
+        /**
+         * PushplusChannel
+         * @description PushPlus channels supported by the application.
+         * @enum {string}
+         */
+        PushplusChannel: "wechat" | "webhook" | "cmcc";
+        /** PushplusSettingsRequest */
+        PushplusSettingsRequest: {
+            channel?: components["schemas"]["PushplusChannel"] | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Token */
+            token?: string | null;
+            /** Webhook Option */
+            webhook_option?: string | null;
+        };
+        /** PushplusSettingsResponse */
+        PushplusSettingsResponse: {
+            channel: components["schemas"]["PushplusChannel"];
+            /** Enabled */
+            enabled: boolean;
+            /** Token Configured */
+            token_configured: boolean;
+            /** Token Last Four */
+            token_last_four?: string | null;
+            /** Webhook Option Configured */
+            webhook_option_configured: boolean;
+            /** Webhook Option Last Four */
+            webhook_option_last_four?: string | null;
+        };
         /** RunDetailResponse */
         RunDetailResponse: {
             /** Completed At */
@@ -1783,6 +1814,7 @@ export interface components {
             /** Mx Api Key */
             mx_api_key?: string | null;
             prompt_profile?: components["schemas"]["AniuAgentPromptRequest"] | null;
+            pushplus?: components["schemas"]["PushplusSettingsRequest"] | null;
             /** Stage Settings */
             stage_settings?: components["schemas"]["StageSettingsRequest"][] | null;
         };

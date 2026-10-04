@@ -21,6 +21,7 @@ from backend.business.settings.public_stock_interfaces import (
     PUBLIC_STOCK_TOOL_CATALOG,
     PublicStockProvider,
 )
+from backend.business.settings.pushplus import PushplusChannel
 from backend.business.settings.stages import StageSettings
 from backend.llm import (
     ModelCatalogItem,
@@ -63,11 +64,22 @@ class StageSettingsDTO:
 
 
 @dataclass(frozen=True, slots=True)
+class PushplusSettingsDTO:
+    enabled: bool
+    channel: PushplusChannel
+    token_configured: bool
+    token_last_four: str | None
+    webhook_option_configured: bool
+    webhook_option_last_four: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AppSettingsDTO:
     mx: MxSettingsDTO
     prompt_profile: AniuAgentPromptDTO
     stage_settings: tuple[StageSettingsDTO, ...]
     dream_schedule_time: str
+    pushplus: PushplusSettingsDTO
     revision: int
     created_at: datetime
     updated_at: datetime
@@ -187,6 +199,18 @@ def to_settings_dto(settings: AppSettings) -> AppSettingsDTO:
             to_stage_settings_dto(item) for item in settings.stage_settings.values()
         ),
         dream_schedule_time=settings.dream_schedule_time,
+        pushplus=PushplusSettingsDTO(
+            enabled=settings.pushplus.enabled,
+            channel=settings.pushplus.channel,
+            token_configured=_secret_configured(settings.pushplus_token),
+            token_last_four=_secret_last_four(settings.pushplus_token),
+            webhook_option_configured=_secret_configured(
+                settings.pushplus.webhook_option
+            ),
+            webhook_option_last_four=_secret_last_four(
+                settings.pushplus.webhook_option
+            ),
+        ),
         revision=settings.revision,
         created_at=settings.created_at,
         updated_at=settings.updated_at,

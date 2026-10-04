@@ -60,6 +60,19 @@ if (!HTMLElement.prototype.scrollIntoView) {
   });
 }
 
+if (!globalThis.ResizeObserver) {
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    value: class ResizeObserverMock {
+      observe(): void {}
+
+      unobserve(): void {}
+
+      disconnect(): void {}
+    },
+  });
+}
+
 afterEach(() => {
   cleanup();
 });

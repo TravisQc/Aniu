@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.business.settings import (
     AniuAgentPrompt,
     AppSettings,
+    PushplusSettings,
     normalize_stage_settings,
 )
 from backend.business.shared import ConfigurationConflictError
@@ -52,6 +53,7 @@ class SettingsRepository:
                     stage_id: item.as_dict()
                     for stage_id, item in settings.stage_settings.items()
                 },
+                pushplus_settings_json=settings.pushplus.as_dict(),
                 dream_schedule_time=settings.dream_schedule_time,
                 revision=1,
                 created_at=settings.created_at.isoformat(),
@@ -68,6 +70,7 @@ class SettingsRepository:
                 stage_id: item.as_dict()
                 for stage_id, item in settings.stage_settings.items()
             }
+            model.pushplus_settings_json = settings.pushplus.as_dict()
             model.dream_schedule_time = settings.dream_schedule_time
             model.updated_at = now.isoformat()
 
@@ -78,6 +81,12 @@ class SettingsRepository:
             "mx_api_key",
             settings.mx_api_key,
         )
+        await self._secret_store.set_secret(
+            "app_settings",
+            str(model.id),
+            "pushplus_token",
+            settings.pushplus_token,
+        )
         return await self._to_domain(model)
 
     async def _to_domain(self, model: AppSettingsModel) -> AppSettings:
@@ -86,8 +95,15 @@ class SettingsRepository:
             str(model.id),
             "mx_api_key",
         )
+        pushplus_token = await self._secret_store.get_secret(
+            "app_settings",
+            str(model.id),
+            "pushplus_token",
+        )
         return AppSettings(
             mx_api_key=mx_api_key,
+            pushplus=PushplusSettings.from_mapping(model.pushplus_settings_json),
+            pushplus_token=pushplus_token,
             prompt_profile=AniuAgentPrompt.from_mapping(model.prompt_profile_json),
             stage_settings=normalize_stage_settings(model.stage_settings_json),
             dream_schedule_time=model.dream_schedule_time,
