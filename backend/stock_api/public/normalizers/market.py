@@ -425,6 +425,66 @@ def normalize_sector_money_flow(
     )
 
 
+def normalize_sina_sector_money_flow(
+    raw: object, request: SectorMoneyFlowRequest
+) -> NormalizedData:
+    if not isinstance(raw, list):
+        raise UpstreamUnavailable(
+            "新浪板块资金流响应无效。",
+            retryable=False,
+            error_category="invalid_response",
+        )
+    rows: list[JsonRecord] = []
+    for raw_row in raw:
+        row = as_record(raw_row)
+        if row is None:
+            continue
+        net_inflow = number(row.get("netamount"))
+        if net_inflow is None:
+            continue
+        change_ratio = number(row.get("avg_changeratio"))
+        rows.append(
+            {
+                "sector_code": text(row.get("category")),
+                "name": text(row.get("name")),
+                "price": number(row.get("avg_price")),
+                "change_percent": change_ratio * 100
+                if change_ratio is not None
+                else None,
+                # Sina reports currency amounts in yuan, not ten-thousand yuan.
+                "net_inflow": net_inflow,
+            }
+        )
+    if raw and not rows:
+        raise UpstreamUnavailable(
+            "新浪板块资金流响应缺少有效净流入数据。",
+            retryable=False,
+            error_category="invalid_response",
+        )
+    ranking = normalize_ranking(
+        "sina",
+        rows,
+        SectorRankingRequest(
+            sector_type=request.sector_type,
+            sort="net_inflow",
+            order="desc",
+            page=request.page,
+            limit=request.limit,
+        ),
+        sectors=True,
+    )
+    return NormalizedData(
+        {
+            "sector_type": request.sector_type,
+            "page": request.page,
+            "limit": request.limit,
+            "items": ranking.data["items"],
+        },
+        degraded=True,
+        warnings=("新浪板块资金净流入的分类和统计口径与东方财富主力资金不同。",),
+    )
+
+
 def normalize_connect_flow(
     raw: object, request: ConnectMoneyFlowRequest
 ) -> NormalizedData:
@@ -785,5 +845,6 @@ __all__ = [
     "normalize_quotes",
     "normalize_ranking",
     "normalize_sector_money_flow",
+    "normalize_sina_sector_money_flow",
     "normalize_stock_money_flow",
 ]

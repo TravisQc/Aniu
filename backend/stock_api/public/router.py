@@ -75,6 +75,7 @@ from backend.stock_api.public.normalizers.market import (
     normalize_quotes,
     normalize_ranking,
     normalize_sector_money_flow,
+    normalize_sina_sector_money_flow,
     normalize_stock_money_flow,
 )
 from backend.stock_api.public.providers.eastmoney import EastMoneyAdapter
@@ -545,15 +546,26 @@ class PublicStockRouter:
                 )
             ]
         if isinstance(request, SectorMoneyFlowRequest):
-            return [
+            candidates = [
                 _candidate(
                     "eastmoney",
                     "em_market_snapshot",
                     eastmoney.sector_money_flow,
                     request,
                     lambda raw: normalize_sector_money_flow(raw, request),
+                    fallback_on_empty=True,
                 )
             ]
+            candidates.append(
+                _candidate(
+                    "sina",
+                    "sina_sector_money_flow",
+                    sina.sector_money_flow,
+                    request,
+                    lambda raw: normalize_sina_sector_money_flow(raw, request),
+                )
+            )
+            return candidates
         if isinstance(request, ConnectMoneyFlowRequest):
             return [
                 _candidate(

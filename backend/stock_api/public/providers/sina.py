@@ -13,6 +13,7 @@ from backend.stock_api.public.contracts import (
     KlineRequest,
     NewsFeedRequest,
     QuoteSnapshotRequest,
+    SectorMoneyFlowRequest,
     SectorRankingRequest,
     StockMoneyFlowHistoryRequest,
     StockNewsRequest,
@@ -166,6 +167,35 @@ class SinaAdapter(FixedPublicAdapter):
             parser=parse_jsonp,
         )
         return source
+
+    async def sector_money_flow(
+        self,
+        request: SectorMoneyFlowRequest,
+        *,
+        timeout_seconds: float,
+        cancellation_token: AbortSignal | None,
+    ) -> object:
+        # Match the classification parameter used by Sina's money-flow page.
+        params = {
+            "fenlei": 0 if request.sector_type == "industry" else 1,
+            "page": request.page,
+            "num": request.limit,
+            "sort": "netamount",
+            "asc": 0,
+        }
+        return await self._json(
+            operation=request.operation,
+            endpoint="sina_sector_money_flow",
+            url=build_url(
+                "https://vip.stock.finance.sina.com.cn",
+                "/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk",
+                params,
+            ),
+            parameters=params,
+            timeout_seconds=timeout_seconds,
+            cancellation_token=cancellation_token,
+            headers=public_headers(referer="https://finance.sina.com.cn/"),
+        )
 
     async def stock_money_flow_history(
         self,
