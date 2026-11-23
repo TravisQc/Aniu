@@ -90,6 +90,14 @@ const stockApiSettings = {
         access_modes: ["read"],
       },
       {
+        id: "self_select",
+        name: "自选股管理",
+        summary: "查询、添加或删除东方财富账户下的自选股。",
+        features: ["自选股列表", "添加自选股", "删除自选股"],
+        examples: ["查询我的自选股列表", "把600519添加到我的自选股列表"],
+        access_modes: ["read", "write"],
+      },
+      {
         id: "portfolio",
         name: "模拟交易",
         summary: "查询模拟组合并提交交易或撤单。",
@@ -138,7 +146,7 @@ describe("StockApiSettingsPage", () => {
     expect(screen.queryByRole("region", { name: "妙想工具目录" })).not.toBeInTheDocument();
 
     const cards = within(directory).getAllByRole("article");
-    expect(cards).toHaveLength(9);
+    expect(cards).toHaveLength(10);
     const quoteCard = cards[0];
     if (!quoteCard) throw new Error("缺少实时行情卡片");
     expect(quoteCard).toHaveClass("min-w-0", "px-4", "py-3");
@@ -177,6 +185,9 @@ describe("StockApiSettingsPage", () => {
     expect(within(directory).queryByText(/^交易$/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "资讯搜索" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "模拟交易" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "自选股管理" })).toBeInTheDocument();
+    expect(within(directory).getByText("添加自选股")).toBeInTheDocument();
+    expect(within(directory).getByText("删除自选股")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "系统工具" }));
     const systemTools = await screen.findByRole("region", { name: "系统工具" });
@@ -190,7 +201,7 @@ describe("StockApiSettingsPage", () => {
     expect(await screen.findByRole("region", { name: "数据工具调用日志" })).toBeInTheDocument();
   });
 
-  it("shows and filters logs by the sixteen data-tool groups", async () => {
+  it("shows and filters logs by data-tool groups", async () => {
     const user = userEvent.setup();
     api.getStockApiSettings.mockResolvedValue(stockApiSettings);
     api.listStockApiLogs.mockResolvedValue({

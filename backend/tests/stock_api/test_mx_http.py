@@ -315,7 +315,11 @@ async def test_mx_http_records_task_cancellation_during_rate_limit_backoff() -> 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "endpoint",
-    ["/api/claw/mockTrading/trade", "/api/claw/mockTrading/cancel"],
+    [
+        "/api/claw/mockTrading/trade",
+        "/api/claw/mockTrading/cancel",
+        "/api/claw/self-select/manage",
+    ],
 )
 async def test_mx_http_does_not_retry_write_operations(endpoint: str) -> None:
     calls = 0

@@ -292,6 +292,7 @@ class AppRuntime:
                 mx_research_client=clients.research,
                 mx_portfolio_client=clients.portfolio,
                 mx_trading_client=clients.trading,
+                mx_self_select_client=clients.self_select,
                 public_stock_data=self.public_stock_data,
                 session_factory=self.require_session_factory(),
                 pushplus_notifier=self.require_pushplus_notifier(),

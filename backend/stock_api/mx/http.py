@@ -297,6 +297,8 @@ _MX_OPERATION_BY_ENDPOINT = {
     "/api/claw/query": "query_market_data",
     "/api/claw/news-search": "search_news",
     "/api/claw/stock-screen": "select_stocks",
+    "/api/claw/self-select/get": "query_self_select",
+    "/api/claw/self-select/manage": "manage_self_select",
     "/api/claw/mockTrading/trade": "trade",
     "/api/claw/mockTrading/cancel": "cancel",
 }
@@ -306,11 +308,15 @@ _MX_INTERFACE_NAME_BY_OPERATION = {
     "query_market_data": "金融数据查询",
     "search_news": "资讯搜索",
     "select_stocks": "智能选股",
+    "query_self_select": "自选股管理",
+    "manage_self_select": "自选股管理",
     "trade": "模拟交易",
     "cancel": "模拟交易",
 }
 
-_MX_READ_OPERATIONS = frozenset({"query_market_data", "search_news", "select_stocks"})
+_MX_READ_OPERATIONS = frozenset(
+    {"query_market_data", "search_news", "select_stocks", "query_self_select"}
+)
 _MX_DIRECT_RESPONSE_OPERATIONS = frozenset({"trade", "cancel"})
 _MX_DIRECT_SUCCESS_STATUSES = frozenset(
     {"accepted", "cancelled", "ok", "submitted", "success"}
@@ -320,6 +326,8 @@ _MX_NESTED_SUCCESS_CODES_BY_OPERATION = {
     "query_market_data": frozenset({"0", "200"}),
     "search_news": frozenset({"0", "200"}),
     "select_stocks": frozenset({"0", "100", "200"}),
+    "query_self_select": frozenset({"0", "200"}),
+    "manage_self_select": frozenset({"0", "200"}),
 }
 
 
@@ -327,6 +335,8 @@ _MX_INTERFACE_IDENTIFIER_BY_OPERATION = {
     "query_market_data": "金融数据查询",
     "search_news": "资讯搜索",
     "select_stocks": "智能选股",
+    "query_self_select": "自选股管理 · 查询列表",
+    "manage_self_select": "自选股管理 · 添加或删除",
     "trade": "模拟交易 · 下单",
     "cancel": "模拟交易 · 撤销委托",
 }
@@ -375,7 +385,7 @@ def _mx_business_error(
         elif response.get("message") not in (None, ""):
             return str(response["message"])
 
-    if operation_id not in _MX_READ_OPERATIONS:
+    if operation_id not in _MX_NESTED_SUCCESS_CODES_BY_OPERATION:
         return None
 
     data = response.get("data")

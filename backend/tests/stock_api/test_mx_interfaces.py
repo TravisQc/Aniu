@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from backend.stock_api.mx.research import MxResearchClient
+from backend.stock_api.mx.self_select import MxSelfSelectClient
 from backend.stock_api.mx.trading import MxPaperTradingClient
 
 
@@ -33,6 +34,38 @@ async def test_research_interfaces_use_their_mx_endpoints() -> None:
         ("/api/claw/news-search", {"query": "A股政策"}),
         ("/api/claw/stock-screen", {"keyword": "低估值高股息"}),
     ]
+
+
+@pytest.mark.asyncio
+async def test_self_select_interfaces_preserve_explicit_management_intent() -> None:
+    transport = RecordingTransport()
+    client = MxSelfSelectClient(transport)  # type: ignore[arg-type]
+
+    await client.query()
+    await client.manage("  把600519添加到我的自选股列表  ")
+    await client.manage("把600519从我的自选股列表删除")
+    assert transport.calls == [
+        ("/api/claw/self-select/get", {}),
+        (
+            "/api/claw/self-select/manage",
+            {"query": "把600519添加到我的自选股列表"},
+        ),
+        (
+            "/api/claw/self-select/manage",
+            {"query": "把600519从我的自选股列表删除"},
+        ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_self_select_rejects_empty_management_instruction_before_request() -> (
+    None
+):
+    transport = RecordingTransport()
+    client = MxSelfSelectClient(transport)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="不能为空"):
+        await client.manage(" \n\t ")
+    assert transport.calls == []
 
 
 @pytest.mark.asyncio

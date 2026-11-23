@@ -26,7 +26,12 @@ from backend.infra.integrations.public_stock_agent_tools import (
 )
 from backend.infra.integrations.pushplus import PushplusTradeNotifier
 from backend.llm import ModelProtocol, ModelProviderConfig
-from backend.stock_api import MxMoniClient, MxPaperTradingClient, MxResearchClient
+from backend.stock_api import (
+    MxMoniClient,
+    MxPaperTradingClient,
+    MxResearchClient,
+    MxSelfSelectClient,
+)
 from backend.stock_api.public import StockMarketDataService
 
 
@@ -41,6 +46,7 @@ class AgentRuntimeFactory:
         mx_research_client: MxResearchClient | None = None,
         mx_portfolio_client: MxMoniClient | None = None,
         mx_trading_client: MxPaperTradingClient | None = None,
+        mx_self_select_client: MxSelfSelectClient | None = None,
         public_stock_data: StockMarketDataService | None = None,
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         pushplus_notifier: PushplusTradeNotifier | None = None,
@@ -50,6 +56,7 @@ class AgentRuntimeFactory:
         self._mx_research_client = mx_research_client
         self._mx_portfolio_client = mx_portfolio_client
         self._mx_trading_client = mx_trading_client
+        self._mx_self_select_client = mx_self_select_client
         self._public_stock_data = public_stock_data
         self._session_factory = session_factory
         self._pushplus_notifier = pushplus_notifier
@@ -78,6 +85,7 @@ class AgentRuntimeFactory:
                 research=self._mx_research_client,
                 portfolio=self._mx_portfolio_client,
                 trading=self._mx_trading_client,
+                self_select=self._mx_self_select_client,
                 notifier=self._pushplus_notifier,
             )
         return registry

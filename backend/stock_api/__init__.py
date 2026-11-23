@@ -16,6 +16,7 @@ from backend.stock_api.mx import (
     MxPaperTradingClient,
     MxRequestGate,
     MxResearchClient,
+    MxSelfSelectClient,
 )
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "MxPaperTradingClient",
     "MxRequestGate",
     "MxResearchClient",
+    "MxSelfSelectClient",
     "StockApiCall",
     "StockApiCallLogger",
     "active_exception_message",

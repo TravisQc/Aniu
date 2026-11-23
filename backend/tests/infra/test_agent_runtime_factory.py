@@ -161,12 +161,15 @@ async def test_runtime_factory_registers_only_direct_mx_tools() -> None:
         mx_research_client=object(),  # type: ignore[arg-type]
         mx_portfolio_client=object(),  # type: ignore[arg-type]
         mx_trading_client=object(),  # type: ignore[arg-type]
+        mx_self_select_client=object(),  # type: ignore[arg-type]
     ).build_tool_registry()
 
     assert set(registry.list_tool_names()) == {
         "query_market_data",
         "search_news",
         "select_stocks",
+        "query_self_select",
+        "manage_self_select",
         "query_portfolio",
         "trade",
         "cancel",

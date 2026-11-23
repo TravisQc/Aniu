@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import cast
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -19,7 +20,7 @@ from backend.infra.integrations.agent_runner import (
     AgentRunnerFactoryAdapter,
 )
 from backend.infra.integrations.agent_runtime import AgentRuntimeFactory
-from backend.infra.integrations.mx_agent_tools import TradeTool
+from backend.infra.integrations.mx_agent_tools import ManageSelfSelectTool, TradeTool
 from backend.llm import ModelProtocol
 
 
@@ -131,3 +132,53 @@ async def test_closed_market_blocks_typed_trade_tool() -> None:
     assert result.content == "交易被阻止。"
     assert result.tool_activity[0]["status"] == "blocked"
     assert "非交易时段" in str(result.tool_activity[0]["error"])
+
+
+@pytest.mark.asyncio
+async def test_closed_market_allows_self_select_management() -> None:
+    query = "把600519添加到我的自选股列表"
+
+    class SelfSelectRequestClient:
+        calls = 0
+
+        async def chat(self, **kwargs: object) -> dict[str, object]:
+            del kwargs
+            self.calls += 1
+            if self.calls == 1:
+                return {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "self-select-1",
+                            "name": "manage_self_select",
+                            "arguments": {"query": query},
+                        }
+                    ],
+                }
+            return {"content": "已加入自选。", "tool_calls": []}
+
+    client = AsyncMock()
+    client.manage.return_value = {"status": 0, "message": "成功"}
+    registry = ToolRegistry()
+    registry.register(ManageSelfSelectTool(client))
+    snapshot = StrategySnapshot(prompt_version="v1", risk_rules_version="v1")
+    context = RunExecutionContext(
+        run=StrategyRun(1, TriggerSource.MANUAL, None, snapshot),
+        snapshot=snapshot,
+        tool_registry=registry,
+        market_session_is_open=lambda: False,
+    )
+    runtime = LlmRuntimeConfig(
+        protocol=ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+        base_url="https://example.invalid",
+        api_key="test",
+        model="test-model",
+    )
+    factory = AgentRunnerFactoryAdapter(
+        SelfSelectRequestClient(),  # type: ignore[arg-type]
+        object(),  # type: ignore[arg-type]
+    )
+    result = await factory.create(context, label="Run", runtime=runtime).prompt(query)
+    assert result.content == "已加入自选。"
+    assert result.tool_activity[0]["status"] == "ok"
+    client.manage.assert_awaited_once_with(query)

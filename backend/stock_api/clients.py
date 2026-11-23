@@ -15,6 +15,7 @@ from backend.stock_api.mx import (
     MxReadCache,
     MxRequestGate,
     MxResearchClient,
+    MxSelfSelectClient,
 )
 
 
@@ -26,6 +27,7 @@ class MxClients:
     research: MxResearchClient
     portfolio: MxMoniClient
     trading: MxPaperTradingClient
+    self_select: MxSelfSelectClient
 
     @classmethod
     def create(
@@ -55,6 +57,7 @@ class MxClients:
             research=MxResearchClient(transport),
             portfolio=portfolio,
             trading=MxPaperTradingClient(transport, read_cache),
+            self_select=MxSelfSelectClient(transport),
         )
 
     async def aclose(self) -> None:

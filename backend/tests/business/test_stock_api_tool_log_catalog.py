@@ -8,13 +8,13 @@ from backend.business.stock_api_logs.catalog import (
 )
 
 
-def test_tool_log_catalog_matches_the_eight_plus_four_plus_four_directory_cards() -> (
+def test_tool_log_catalog_matches_the_eight_plus_four_plus_five_directory_cards() -> (
     None
 ):
-    assert len(STOCK_API_TOOL_CATALOG) == 16
+    assert len(STOCK_API_TOOL_CATALOG) == 17
     assert sum(item.tool_source == "public" for item in STOCK_API_TOOL_CATALOG) == 8
     assert sum(item.tool_source == "aggregate" for item in STOCK_API_TOOL_CATALOG) == 4
-    assert sum(item.tool_source == "mx" for item in STOCK_API_TOOL_CATALOG) == 4
+    assert sum(item.tool_source == "mx" for item in STOCK_API_TOOL_CATALOG) == 5
 
     query_kline = stock_api_tool_descriptor("query_kline")
     market_snapshot = stock_api_tool_descriptor("market_snapshot")
@@ -22,6 +22,7 @@ def test_tool_log_catalog_matches_the_eight_plus_four_plus_four_directory_cards(
     portfolio = stock_api_tool_descriptor("query_portfolio")
     trade = stock_api_tool_descriptor("trade")
     cancel = stock_api_tool_descriptor("cancel")
+    self_select = stock_api_tool_descriptor("query_self_select")
 
     assert query_kline is not None
     assert (
@@ -49,3 +50,10 @@ def test_tool_log_catalog_matches_the_eight_plus_four_plus_four_directory_cards(
     )
     assert trade == portfolio
     assert cancel == portfolio
+    assert self_select is not None
+    assert (self_select.tool_source, self_select.tool_id, self_select.tool_name) == (
+        "mx",
+        "self_select",
+        "自选股管理",
+    )
+    assert stock_api_tool_descriptor("manage_self_select") == self_select

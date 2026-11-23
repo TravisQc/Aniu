@@ -480,6 +480,7 @@ async def test_stock_api_settings_expose_detailed_mx_interfaces_without_quota_en
         "news",
         "data",
         "screening",
+        "self_select",
         "portfolio",
     ]
     for item in interfaces:
@@ -491,7 +492,9 @@ async def test_stock_api_settings_expose_detailed_mx_interfaces_without_quota_en
     assert interfaces[-1]["id"] == "portfolio"
     assert interfaces[-1]["name"] == "模拟交易"
     assert interfaces[-1]["access_modes"] == ["read", "write"]
-    assert all(item["access_modes"] == ["read"] for item in interfaces[:-1])
+    assert interfaces[-2]["id"] == "self_select"
+    assert interfaces[-2]["access_modes"] == ["read", "write"]
+    assert all(item["access_modes"] == ["read"] for item in interfaces[:-2])
 
     update_response = await api_client.put("/api/aniu/settings/stock-api", json={})
     usage_response = await api_client.get("/api/aniu/settings/stock-api/mx-usage")

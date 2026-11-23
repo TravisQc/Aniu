@@ -13,10 +13,15 @@ def test_settings_dtos_expose_mx_configuration_and_data_catalog() -> None:
         "news",
         "data",
         "screening",
+        "self_select",
         "portfolio",
     ]
     assert stock_api_dto.mx.interfaces[-1].name == "模拟交易"
     assert stock_api_dto.mx.interfaces[-1].access_modes == ("read", "write")
+    self_select = stock_api_dto.mx.interfaces[-2]
+    assert self_select.name == "自选股管理"
+    assert self_select.access_modes == ("read", "write")
+    assert self_select.features == ("自选股列表", "添加自选股", "删除自选股")
     assert all(item.features and item.examples for item in stock_api_dto.mx.interfaces)
     assert stock_api_dto.public_stock.name == "公开数据"
     assert [item.tool_name for item in stock_api_dto.public_stock.tools] == [

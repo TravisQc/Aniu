@@ -40,6 +40,19 @@ class RecordingResearchClient:
 
 
 @dataclass
+class RecordingSelfSelectClient:
+    calls: list[str]
+
+    async def query(self) -> dict[str, object]:
+        self.calls.append("query")
+        return {"status": 0, "data": {"stocks": []}}
+
+    async def manage(self, query: str) -> dict[str, object]:
+        self.calls.append(query)
+        return {"status": 0, "message": "操作成功"}
+
+
+@dataclass
 class RecordingPortfolioClient:
     available_cash: float = 25_000
     positions: list[PositionSnapshot] | None = None
@@ -113,6 +126,7 @@ def make_registry() -> tuple[
         research=research,  # type: ignore[arg-type]
         portfolio=portfolio,  # type: ignore[arg-type]
         trading=trading,  # type: ignore[arg-type]
+        self_select=RecordingSelfSelectClient([]),  # type: ignore[arg-type]
     )
     return registry, research, portfolio, trading
 
@@ -157,6 +171,8 @@ def test_mx_registration_exposes_all_direct_tools_with_closed_schemas() -> None:
             SideEffectLevel.READ,
             ("Run",),
         ),
+        "query_self_select": (None, SideEffectLevel.READ, ("Run",)),
+        "manage_self_select": ("query", SideEffectLevel.WRITE, ("Run",)),
         "query_portfolio": (
             "instruction",
             SideEffectLevel.READ,
@@ -171,7 +187,7 @@ def test_mx_registration_exposes_all_direct_tools_with_closed_schemas() -> None:
         tool = registry.get(name)
         definition = tool.to_tool_definition()
         parameters = definition["parameters"]
-        assert parameters["required"] == [parameter]
+        assert parameters["required"] == ([parameter] if parameter else [])
         assert parameters["additionalProperties"] is False
         assert tool.side_effect_level is side_effect
         assert tool.enabled_stages == stages
@@ -210,6 +226,35 @@ async def test_direct_read_tools_call_the_mx_clients() -> None:
         ("news", "半导体研报"),
         ("screening", "低估值高股息"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_self_select_tools_query_and_manage_without_trading_constraints() -> None:
+    registry, _, _, _ = make_registry()
+    query_tool = registry.get("query_self_select")
+    manage_tool = registry.get("manage_self_select")
+
+    assert await registry.call("query_self_select") == {
+        "status": 0,
+        "data": {"stocks": []},
+    }
+    for query in (
+        "把600519添加到我的自选股列表",
+        "把600519从我的自选股列表删除",
+    ):
+        assert await registry.call("manage_self_select", query=query) == {
+            "status": 0,
+            "message": "操作成功",
+        }
+    assert query_tool.client.calls == [
+        "query",
+        "把600519添加到我的自选股列表",
+        "把600519从我的自选股列表删除",
+    ]
+    assert query_tool.execution_mode == "parallel"
+    assert manage_tool.execution_mode == "sequential"
+    assert manage_tool.is_write_call({"query": "添加自选 600519"}) is True
+    assert not getattr(manage_tool, "requires_market_open", False)
 
 
 @pytest.mark.asyncio

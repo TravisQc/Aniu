@@ -14,6 +14,7 @@ from backend.stock_api import (
     MxMoniClient,
     MxPaperTradingClient,
     MxResearchClient,
+    MxSelfSelectClient,
     json_safe,
 )
 from backend.stock_api.mx.trading_parser import (
@@ -136,6 +137,64 @@ class SelectStocksTool:
 
     async def run(self, keyword: str) -> object:
         return await self.client.select_stocks(keyword)
+
+
+@dataclass(slots=True)
+class QuerySelfSelectTool:
+    client: MxSelfSelectClient
+    name: str = "query_self_select"
+    enabled_stages: tuple[str, ...] = field(default=READ_STAGES)
+    side_effect_level: SideEffectLevel = SideEffectLevel.READ
+    execution_mode: str = "parallel"
+
+    def to_tool_definition(self) -> ToolDefinition:
+        return {
+            "name": self.name,
+            "description": "查询当前妙想密钥绑定的东方财富账户的自选股列表及行情。",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+        }
+
+    async def run(self) -> object:
+        return await self.client.query()
+
+
+@dataclass(slots=True)
+class ManageSelfSelectTool:
+    client: MxSelfSelectClient
+    name: str = "manage_self_select"
+    enabled_stages: tuple[str, ...] = field(default=TRADE_STAGES)
+    side_effect_level: SideEffectLevel = SideEffectLevel.WRITE
+    execution_mode: str = "sequential"
+
+    def is_write_call(self, arguments: object) -> bool:
+        del arguments
+        return True
+
+    def to_tool_definition(self) -> ToolDefinition:
+        return {
+            "name": self.name,
+            "description": (
+                "通过自然语言将指定股票加入或移出当前东方财富账户的自选股。"
+                "指令必须明确添加或删除以及股票名称或代码，优先使用六位股票代码，"
+                "例如“把600519添加到我的自选股列表”或"
+                "“把600519从我的自选股列表删除”。"
+                "查询列表请使用 query_self_select。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"query": {"type": "string", "minLength": 1}},
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+        }
+
+    async def run(self, query: str) -> object:
+        return await self.client.manage(query)
 
 
 @dataclass(slots=True)
@@ -318,6 +377,7 @@ def register_mx_tools(
     research: MxResearchClient,
     portfolio: MxMoniClient,
     trading: MxPaperTradingClient,
+    self_select: MxSelfSelectClient | None = None,
     notifier: PushplusTradeNotifier | None = None,
 ) -> None:
     """Expose every supported MX capability as a direct Agent tool."""
@@ -325,6 +385,9 @@ def register_mx_tools(
     registry.register(QueryMarketDataTool(research))
     registry.register(SearchNewsTool(research))
     registry.register(SelectStocksTool(research))
+    if self_select is not None:
+        registry.register(QuerySelfSelectTool(self_select))
+        registry.register(ManageSelfSelectTool(self_select))
     registry.register(QueryPortfolioTool(portfolio))
     registry.register(TradeTool(trading, portfolio, notifier=notifier))
     registry.register(CancelTool(trading, portfolio))
@@ -450,8 +513,10 @@ def _is_successful_trade_result(result: object) -> bool:
 
 __all__ = [
     "CancelTool",
+    "ManageSelfSelectTool",
     "QueryMarketDataTool",
     "QueryPortfolioTool",
+    "QuerySelfSelectTool",
     "SearchNewsTool",
     "SelectStocksTool",
     "TradeTool",

@@ -47,6 +47,19 @@ MX_INTERFACE_CATALOG: tuple[MxInterfaceDescriptor, ...] = (
         operation_ids=("select_stocks",),
     ),
     MxInterfaceDescriptor(
+        interface_id="self_select",
+        name="自选股管理",
+        summary="查询、添加或删除东方财富账户下的自选股，供研究和持续跟踪使用。",
+        features=("自选股列表", "添加自选股", "删除自选股"),
+        examples=(
+            "查询我的自选股列表",
+            "把600519添加到我的自选股列表",
+            "把600519从我的自选股列表删除",
+        ),
+        access_modes=("read", "write"),
+        operation_ids=("query_self_select", "manage_self_select"),
+    ),
+    MxInterfaceDescriptor(
         interface_id="portfolio",
         name="模拟交易",
         summary=(

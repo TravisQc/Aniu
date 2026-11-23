@@ -74,6 +74,14 @@ async def test_stock_api_settings_expose_catalog_and_tool_invocation_logs(
 
     settings_response = await api_client.get("/api/aniu/settings/stock-api")
     assert settings_response.status_code == 200
+    self_select = next(
+        item
+        for item in settings_response.json()["mx"]["interfaces"]
+        if item["id"] == "self_select"
+    )
+    assert self_select["name"] == "自选股管理"
+    assert self_select["access_modes"] == ["read", "write"]
+    assert self_select["features"] == ["自选股列表", "添加自选股", "删除自选股"]
     catalog = settings_response.json()["public_stock"]
     assert catalog["name"] == "公开数据"
     assert catalog["providers"] == ["tencent", "sina", "eastmoney"]
