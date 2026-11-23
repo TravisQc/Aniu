@@ -1,8 +1,7 @@
 name: Publish Docker image
 
 on:
-  release:
-    types: [published]
+  workflow_call:
 
 env:
   REGISTRY: ghcr.io
@@ -24,7 +23,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          source_ref="refs/tags/${RELEASE_TAG}"
+          # Build the same immutable commit that passed the caller's CI jobs.
+          source_ref="${GITHUB_SHA}"
           image_tag="${RELEASE_TAG}"
           publish_latest=true
           if [[ "${RELEASE_PRERELEASE}" == "true" ]]; then

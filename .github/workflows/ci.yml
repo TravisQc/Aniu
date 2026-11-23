@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -12,6 +15,8 @@ jobs:
         working-directory: .
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -31,6 +36,8 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -57,3 +64,11 @@ jobs:
         run: npm test
       - name: Typecheck + build
         run: npm run build
+
+  publish-image:
+    name: Publish Docker image
+    needs: [backend, frontend]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-image.yml

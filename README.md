@@ -249,7 +249,7 @@ docker compose --env-file .aniu/local/.env up -d --no-build --force-recreate
 以 <code>TravisQc/Aniu</code> 为例：
 
 1. 将修复和镜像发布工作流提交并推送到自己的 fork。若 fork 的 GitHub Actions 尚未启用，先在仓库的 Actions 页面启用。
-2. 在包含这些提交的分支上创建新标签并发布正式 Release。也可以直接手动运行 <code>Publish Docker image</code>：选择 <code>main</code> 分支，<code>ref</code> 留空，<code>tag</code> 填要发布的镜像版本（例如 <code>1.0.4</code>），勾选 <code>publish_latest</code>。等待工作流成功，再确认自己的 GHCR 包已设为 Public（或部署主机已有私有包的读取权限）。
+2. 在包含这些提交的分支上创建新标签并发布正式 Release。<code>CI</code> 会先执行前后端检查，全部通过后再调用 <code>Publish Docker image</code>，构建并发布通过检查的同一提交；任何检查失败都会阻止镜像发布。等待整个工作流成功，再确认自己的 GHCR 包已设为 Public（或部署主机已有私有包的读取权限）。
 3. 在**原部署目录**编辑原来的 <code>.aniu/local/.env</code>，添加或替换以下变量，保留已有端口、Token、加密密钥和其他配置：
 
    ```dotenv
