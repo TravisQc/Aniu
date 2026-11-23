@@ -60,6 +60,16 @@ class AccountDashboardResponse(ApiModel):
     orders: list[PortfolioOrderResponse]
 
 
+class WatchlistColumnResponse(ApiModel):
+    key: str
+    title: str
+
+
+class WatchlistResponse(ApiModel):
+    columns: list[WatchlistColumnResponse]
+    items: list[dict[str, str | None]]
+
+
 class AccountRefreshResultResponse(ApiModel):
     status: str
     message: str

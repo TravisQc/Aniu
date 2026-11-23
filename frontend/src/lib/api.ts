@@ -210,6 +210,11 @@ export async function getAccountDashboard() {
   return getResponseData(result);
 }
 
+export async function getWatchlist() {
+  const result = await openapiClient.GET("/api/aniu/account/watchlist");
+  return getResponseData(result);
+}
+
 export async function refreshAccountCache() {
   const result = await openapiClient.POST("/api/aniu/account/refresh");
   return getResponseData(result);

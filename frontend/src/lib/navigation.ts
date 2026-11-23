@@ -8,6 +8,7 @@ import {
   MoonStarIcon,
   NetworkIcon,
   Settings2Icon,
+  StarIcon,
   TimerIcon,
   WorkflowIcon,
 } from "lucide-react";
@@ -88,6 +89,12 @@ export const navigationGroups: NavigationGroup[] = [
         description: "账户资产、持仓与委托",
         to: "/",
         icon: LayoutDashboardIcon,
+      },
+      {
+        title: "自选股票",
+        description: "查看东方财富账户的自选股票",
+        to: "/watchlist",
+        icon: StarIcon,
       },
       {
         title: "任务运行",

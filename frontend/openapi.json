@@ -3628,6 +3628,60 @@
         ],
         "title": "UpdateSettingsRequest",
         "type": "object"
+      },
+      "WatchlistColumnResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title"
+        ],
+        "title": "WatchlistColumnResponse",
+        "type": "object"
+      },
+      "WatchlistResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistColumnResponse"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns",
+          "items"
+        ],
+        "title": "WatchlistResponse",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -3812,6 +3866,92 @@
           }
         ],
         "summary": "Refresh Account Cache",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
+    "/api/aniu/account/watchlist": {
+      "get": {
+        "operationId": "get_watchlist_api_aniu_account_watchlist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request rate limited"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream integration failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service unavailable"
+          }
+        },
+        "security": [
+          {
+            "AniuSessionCookie": []
+          }
+        ],
+        "summary": "Get Watchlist",
         "tags": [
           "Account"
         ]

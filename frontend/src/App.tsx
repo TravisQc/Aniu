@@ -15,6 +15,11 @@ const DashboardPage = lazy(() =>
 const RunsPage = lazy(() =>
   import("./features/runs").then((module) => ({ default: module.RunsPage })),
 );
+const WatchlistPage = lazy(() =>
+  import("./features/watchlist/watchlist-page").then((module) => ({
+    default: module.WatchlistPage,
+  })),
+);
 const MemoryOverviewPage = lazy(() =>
   import("./features/memories/memory-overview-page").then((module) => ({
     default: module.MemoryOverviewPage,
@@ -75,6 +80,10 @@ const router = createBrowserRouter([
           {
             index: true,
             element: page(<DashboardPage />),
+          },
+          {
+            path: "watchlist",
+            element: page(<WatchlistPage />),
           },
           {
             path: "runs",

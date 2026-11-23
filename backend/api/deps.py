@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.db import get_db_session, get_session_factory
 from backend.business.account.service import AccountAppService
+from backend.business.account.watchlist import WatchlistService
 from backend.business.auth.service import AuthAppService
 from backend.business.dreams.service import DreamService
 from backend.business.market import MarketOverviewQueryPort
@@ -36,6 +37,8 @@ class ApiRuntimePort(Protocol):
     def dream_query_service(self, session: AsyncSession) -> DreamService: ...
 
     async def account_service(self, session: AsyncSession) -> AccountAppService: ...
+
+    def watchlist_service(self) -> WatchlistService: ...
 
     def require_public_stock_data(self) -> object: ...
 
@@ -103,6 +106,12 @@ def get_market_overview_service(
     runtime: Annotated[ApiRuntimePort, Depends(get_runtime)],
 ) -> MarketOverviewQueryPort:
     return runtime.market_overview_query()
+
+
+def get_watchlist_service(
+    runtime: Annotated[ApiRuntimePort, Depends(get_runtime)],
+) -> WatchlistService:
+    return runtime.watchlist_service()
 
 
 def get_settings_service(

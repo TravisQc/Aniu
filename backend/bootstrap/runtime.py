@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from backend.bootstrap.runtime_config import RuntimeConfig
 from backend.business.account.runtime import AccountRefreshGate
 from backend.business.account.service import AccountAppService
+from backend.business.account.watchlist import WatchlistService
 from backend.business.auth.service import AuthAppService, AuthLoginThrottle
 from backend.business.dreams.service import DreamService
 from backend.business.market import MarketOverviewQueryPort
@@ -184,6 +185,9 @@ class AppRuntime:
 
     def market_overview_query(self) -> MarketOverviewQueryPort:
         return PublicMarketOverviewQuery(self.require_public_stock_data())
+
+    def watchlist_service(self) -> WatchlistService:
+        return WatchlistService(self.require_mx_clients().self_select)
 
     def stock_api_log_service(self, session: AsyncSession) -> StockApiLogService:
         return StockApiLogService(StockApiCallLogRepository(session))

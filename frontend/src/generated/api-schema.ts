@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/aniu/account/watchlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Watchlist */
+        get: operations["get_watchlist_api_aniu_account_watchlist_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/aniu/auth/login": {
         parameters: {
             query?: never;
@@ -1818,6 +1835,22 @@ export interface components {
             /** Stage Settings */
             stage_settings?: components["schemas"]["StageSettingsRequest"][] | null;
         };
+        /** WatchlistColumnResponse */
+        WatchlistColumnResponse: {
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+        };
+        /** WatchlistResponse */
+        WatchlistResponse: {
+            /** Columns */
+            columns: components["schemas"]["WatchlistColumnResponse"][];
+            /** Items */
+            items: {
+                [key: string]: string | null;
+            }[];
+        };
     };
     responses: never;
     parameters: never;
@@ -1917,6 +1950,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountRefreshResultResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Upstream integration failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_watchlist_api_aniu_account_watchlist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistResponse"];
                 };
             };
             /** @description Authentication required */

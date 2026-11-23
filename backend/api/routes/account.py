@@ -6,10 +6,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from backend.api.deps import get_account_app_service
+from backend.api.deps import get_account_app_service, get_watchlist_service
 from backend.api.schemas.account import (
     AccountDashboardResponse,
     AccountRefreshResultResponse,
+    WatchlistResponse,
 )
 from backend.api.schemas.error import error_responses
 from backend.api.security import require_authenticated
@@ -18,6 +19,7 @@ from backend.business.account.dto import (
     AccountRefreshResultDTO,
 )
 from backend.business.account.service import AccountAppService
+from backend.business.account.watchlist import WatchlistDTO, WatchlistService
 
 router = APIRouter(
     prefix="/api/aniu/account",
@@ -25,6 +27,13 @@ router = APIRouter(
     dependencies=[Depends(require_authenticated)],
     responses=error_responses(401, 403, 422, 429, 502, 503),
 )
+
+
+@router.get("/watchlist", response_model=WatchlistResponse)
+async def get_watchlist(
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+) -> WatchlistDTO:
+    return await service.get_watchlist()
 
 
 @router.get("/dashboard", response_model=AccountDashboardResponse)
